@@ -23,10 +23,10 @@ public class UsersRepositoryImpl implements UsersRepository
 	}
 
 	private void createTableIfNotExists() {
-		String sql = "CREATE TABLE IF NOT EXITS users(" +
+		String sql = "CREATE TABLE IF NOT EXISTS users(" +
 					 "id SERIAL PRIMARY KEY, " +
-					 "username VARCHAR(255), UNIQUE NOT NULL, " +
-					 "password VARCHAR(255), NOT NULL)";
+					 "username VARCHAR(255) UNIQUE NOT NULL, " +
+					 "password VARCHAR(255) NOT NULL)";
 		jdbcTemplate.execute(sql);
 	}
 
@@ -57,7 +57,7 @@ public class UsersRepositoryImpl implements UsersRepository
 
 	@Override
 	public void save(User entity) {
-		String sql = "INSERT INTO users (username, password) VALUE (?, ?)";
+		String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
 		jdbcTemplate.update(sql, entity.getUsername(), entity.getPassword());
 	}
 
