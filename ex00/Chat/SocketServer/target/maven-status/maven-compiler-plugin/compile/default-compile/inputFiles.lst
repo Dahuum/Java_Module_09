@@ -1,0 +1,9 @@
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/app/Main.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/config/SocketsApplicationConfig.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/models/User.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/repositories/CrudRepository.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/repositories/UsersRepository.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/repositories/UsersRepositoryImpl.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/server/Server.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/services/UserService.java
+/home/achahrou/Desktop/Java_Module_09/ex00/Chat/SocketServer/src/main/java/fr/school42/sockets/services/UsersServiceImpl.java

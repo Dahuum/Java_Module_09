@@ -3,25 +3,64 @@ package fr.school42.sockets.server;
 import java.net.*;
 import java.io.*;
 
-public class Server {
-    public static void main( String[] args ) throws IOException 
-	{
-    	int port = 8081;
+
+import fr.school42.sockets.services.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Server 
+{
+	private final UserService userService;
+	
+	@Autowired
+	public Server(UserService userService) {
+		this.userService = userService;
+	}
+
+	public void start(int port) { 
 		System.out.println("Starting server on  port " + port); 
 
-		ServerSocket serverSocket = new ServerSocket(port);
-		Socket clientSocket = serverSocket.accept();
+		try (ServerSocket serverSocket = new ServerSocket(port)) {
+			while (true) {
+				Socket clientSocket = serverSocket.accept();
+				System.out.println("Client connected: " + clientSocket.getInetAddress());
 
-		PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-		BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				handleClient(clientSocket);
+			}
+		} catch (IOException e) { System.err.println("Server error: " + e.getMessage()); }
+	}
 
-		out.println("Hello from Server!!");
+	private void handleClient(Socket clientSocket) {
+		try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+				BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) 
+		{
+			out.println("Hello from Server!");
 
-		// Wait for client to type SignUP
-		String input = in.readLine();
-		System.out.println("Client said: " + input);
+			String input = in.readLine();
+			System.out.println("Client said: " + input);
 
-		serverSocket.close();
-		clientSocket.close();
+			if (input.equals("signUp")) {
+				out.println("Enter username:");
+				String username = in.readLine();
+				out.println("Enter password:");
+				String password = in.readLine();
+
+				boolean success = userService.signUp(username, password);
+				if (success) {
+					out.println("Successful!");
+					System.out.println("User registred: " + username);
+				} else {
+					out.println("User already exits!");
+					System.err.println("Registration failed for: " + username);
+				}
+			}
+		} 
+		catch (IOException e) { System.err.println("Error handling client: " + e.getMessage()); }
+		finally {
+			try {
+				clientSocket.close();
+			} catch (IOException e) { System.err.println("Error closing client socket: " + e.getMessage()); }
+		}
 	}
 }
