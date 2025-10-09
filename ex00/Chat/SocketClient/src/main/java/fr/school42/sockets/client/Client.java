@@ -32,7 +32,7 @@ public class Client {
             String command = scanner.nextLine();
             out.println(command);
 
-            if ("signUp".equals(command)) {
+            if (command.toLowerCase().equals("signup")) {
                 String prompt = in.readLine();
                 System.out.println(prompt);
                 System.out.print("> ");
@@ -43,7 +43,7 @@ public class Client {
                 System.out.println(prompt);
                 System.out.print("> ");
                 String password = scanner.nextLine();
-                out.println(password);
+                out.println("hello wolrd   " + password);
 
                 String response = in.readLine();
                 System.out.println(response);

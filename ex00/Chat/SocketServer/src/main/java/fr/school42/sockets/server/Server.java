@@ -40,7 +40,7 @@ public class Server
 			String input = in.readLine();
 			System.out.println("Client said: " + input);
 
-			if (input.equals("signUp")) {
+			if (input.toLowerCase().equals("signup")) {
 				out.println("Enter username:");
 				String username = in.readLine();
 				out.println("Enter password:");
