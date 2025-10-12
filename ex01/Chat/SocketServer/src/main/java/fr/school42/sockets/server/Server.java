@@ -23,10 +23,10 @@ public class Server
 	private final List<ClientHandler> connectedClients;
 	
 	@Autowired
-	public Server(UserService userService, MessagesRepository messagesReposotiry ) {
+	public Server(UserService userService, MessagesRepository messagesRepository ) {
 		this.userService = userService;
-		this.messagesReposotiry = messagesReposotiry;
-		this.connectedClients = Collections.synchronizedList(new ArrayListM<>());
+		this.messagesRepository = messagesRepository;
+		this.connectedClients = Collections.synchronizedList(new ArrayList<>());
 	}
 
 	public void start(int port) { 
@@ -37,8 +37,8 @@ public class Server
 				Socket clientSocket = serverSocket.accept();
 				System.out.println("Client connected: " + clientSocket.getInetAddress());
 
-				ClientHandler(clientSocket, this, userService, messagesRepository);
-				new Thread(ClientHandler).start(); // wa nssit threads f java, tfu, wkha ra ashal mayakun, ofc compared to c.....
+				ClientHandler ch = new ClientHandler(clientSocket, this, userService, messagesRepository);
+				new Thread(ch).start(); // wa nssit threads f java, tfu, wkha ra ashal mayakun, ofc compared to c.....
 			}
 		} catch (IOException e) { System.err.println("Server error: " + e.getMessage()); }
 	}

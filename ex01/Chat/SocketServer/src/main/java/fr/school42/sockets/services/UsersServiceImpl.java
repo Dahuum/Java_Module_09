@@ -46,6 +46,8 @@ public class UsersServiceImpl implements UserService
 	
 	@Override
 	public User getUserByUsername(String username) { 
-	    return usersRepo.findByUsername(username);
+	    Optional<User> user = usersRepo.findByUsername(username);
+		if (user.isPresent()) return user.get();
+		else throw new IllegalStateException("Value is missing!"); 
 	} // ou safy al7mar, ra andek user repo tma.
 }

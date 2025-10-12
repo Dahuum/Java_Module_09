@@ -55,7 +55,7 @@ public class MessagesRepositoryImpl implements MessagesRepository
 		try {
 			Message message = jdbcTemplate.queryForObject(sql, new MessageRowMaper(), id);
 			return Optional.ofNullable(message);
-		} catch (Exception e) { return Optinal.empty(); }
+		} catch (Exception e) { return Optional.empty(); }
 	}
 
 	@Override

@@ -17,7 +17,7 @@ public class Message {
 		this.timestamp = LocalDateTime.now();
 	}
 	// hada dial db
-	public Message(Long id, Long senderId, String senderUsername, String text) {
+	public Message(Long id, Long senderId, String senderUsername, String text, LocalDateTime timestamp) {
 		this.id = id;	
 		this.senderId = senderId;
 		this.senderUsername = senderUsername;
