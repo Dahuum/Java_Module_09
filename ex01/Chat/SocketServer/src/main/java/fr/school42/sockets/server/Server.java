@@ -1,21 +1,32 @@
+
 package fr.school42.sockets.server;
 
-import java.net.*;
-import java.io.*;
-
-
+import fr.school42.sockets.repositories.MessagesRepository;
 import fr.school42.sockets.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Component
 public class Server 
 {
 	private final UserService userService;
+	private final MessagesRepository messagesRepository;
+	private final List<ClientHandler> connectedClients;
 	
 	@Autowired
-	public Server(UserService userService) {
+	public Server(UserService userService, MessagesRepository messagesReposotiry ) {
 		this.userService = userService;
+		this.messagesReposotiry = messagesReposotiry;
+		this.connectedClients = Collections.synchronizedList(new ArrayListM<>());
 	}
 
 	public void start(int port) { 
@@ -26,41 +37,31 @@ public class Server
 				Socket clientSocket = serverSocket.accept();
 				System.out.println("Client connected: " + clientSocket.getInetAddress());
 
-				handleClient(clientSocket);
+				ClientHandler(clientSocket, this, userService, messagesRepository);
+				new Thread(ClientHandler).start(); // wa nssit threads f java, tfu, wkha ra ashal mayakun, ofc compared to c.....
 			}
 		} catch (IOException e) { System.err.println("Server error: " + e.getMessage()); }
 	}
 
-	private void handleClient(Socket clientSocket) {
-		try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-				BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) 
-		{
-			out.println("Hello from Server!");
+	public void addClient(ClientHandler client) {
+		synchronized (connectedClients) {
+			connectedClients.add(client);
+			System.out.println("Active clients: " + connectedClients.size());
+		}
+	} 
 
-			String input = in.readLine();
-			System.out.println("Client said: " + input);
-
-			if (input.toLowerCase().equals("signup")) {
-				out.println("Enter username:");
-				String username = in.readLine();
-				out.println("Enter password:");
-				String password = in.readLine();
-
-				boolean success = userService.signUp(username, password);
-				if (success) {
-					out.println("Successful!");
-					System.out.println("User registred: " + username);
-				} else {
-					out.println("User already exits!");
-					System.err.println("Registration failed for: " + username);
-				}
-			}
-		} 
-		catch (IOException e) { System.err.println("Error handling client: " + e.getMessage()); }
-		finally {
-			try {
-				clientSocket.close();
-			} catch (IOException e) { System.err.println("Error closing client socket: " + e.getMessage()); }
+	public void removeClient(ClientHandler client) {
+		synchronized (connectedClients) {
+			connectedClients.remove(client);
+			System.out.println("Client disconnected. Active clients: " + connectedClients.size());
 		}
 	}
-}
+
+	// sender is not used, n9der nkhdem bih if i wanted to check for it, to not broadcast to it for example
+	public void broadcast(String message, ClientHandler sender) { 
+		synchronized (connectedClients) {
+			for (ClientHandler client: connectedClients)
+				client.sendMessage(message);
+		}
+	} 
+}	

@@ -43,4 +43,9 @@ public class UsersServiceImpl implements UserService
 		User user = userO.get();
 		return passwordEncoder.matches(password, user.getPassword());
 	}
+	
+	@Override
+	public User getUserByUsername(String username) { 
+	    return usersRepo.findByUsername(username);
+	} // ou safy al7mar, ra andek user repo tma.
 }

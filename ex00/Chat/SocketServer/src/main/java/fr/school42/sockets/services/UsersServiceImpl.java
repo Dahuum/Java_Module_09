@@ -22,9 +22,6 @@ public class UsersServiceImpl implements UserService
 
 	@Override
 	public boolean signUp(String username, String password) {
-	    if (username == null || username.trim().isEmpty() || password == null || password.isEmpty())
-			throw new IllegalArgumentException("Username and password cannot be empty");
-	
 		Optional<User> existingUser = usersRepo.findByUsername(username);
 		if (existingUser.isPresent()) return false;
 
