@@ -17,23 +17,29 @@ public class Client {
             }
         }
 
-        try (
-            Socket socket = new Socket("localhost", serverPort);
+        Socket socket = null;
+        try {
+            socket = new Socket("localhost", serverPort);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            Scanner scanner = new Scanner(System.in)
-        ) {
-            // Thread to read from server (receives messages)
+            Scanner scanner = new Scanner(System.in);
+
+            Socket finalSocket = socket;
+            
+            // Thread to read from server and print to console
             Thread readerThread = new Thread(() -> {
                 try {
                     String serverMessage;
                     while ((serverMessage = in.readLine()) != null) {
                         System.out.println(serverMessage);
                     }
+                    // Server closed connection - exit program
+                    System.exit(0);
                 } catch (IOException e) {
                     // Connection closed
                 }
             });
+            readerThread.setDaemon(true); // Make it daemon so it doesn't block exit
             readerThread.start();
 
             // Main thread: read from user and send to server
@@ -41,17 +47,18 @@ public class Client {
             while (scanner.hasNextLine()) {
                 userInput = scanner.nextLine();
                 out.println(userInput);
-                
-                // If user types Exit, stop
-                if (userInput.equalsIgnoreCase("Exit")) {
-                    break;
-                }
             }
 
-            readerThread.join(1000); // Wait for reader thread to finish
-
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             System.err.println("Client error: " + e.getMessage());
+        } finally {
+            if (socket != null && !socket.isClosed()) {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
         }
     }
 }
