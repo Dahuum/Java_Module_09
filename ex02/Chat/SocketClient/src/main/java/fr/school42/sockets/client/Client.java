@@ -7,7 +7,13 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+
 public class Client {
+    private static final Gson gson = new Gson(); 
+    
     public static void main(String[] args) {
         int serverPort = 8081;
 
@@ -46,7 +52,11 @@ public class Client {
             String userInput;
             while (scanner.hasNextLine()) {
                 userInput = scanner.nextLine();
-                out.println(userInput);
+                JsonObject json = new JsonObject();
+                json.addProperty("message", userInput);
+                
+                // Send JSON instead 
+                out.println(gson.toJson(json));
             }
 
         } catch (IOException e) {

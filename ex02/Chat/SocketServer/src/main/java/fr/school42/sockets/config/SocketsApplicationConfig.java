@@ -23,7 +23,7 @@ public class SocketsApplicationConfig
 
 		HikariConfig config = new HikariConfig();
 		config.setJdbcUrl(props.getProperty("db.url"));
-		config.setUsername(props.getProperty("db.username"));
+		config.setUsername(props.getProperty("db.user"));
 		config.setPassword(props.getProperty("db.password"));
 		config.setDriverClassName(props.getProperty("db.driver.name"));
 

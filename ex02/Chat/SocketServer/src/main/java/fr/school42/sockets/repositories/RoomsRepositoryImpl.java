@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.DependsOn;
 
 import javax.sql.DataSource;
 import java.sql.PreparedStatement;
@@ -17,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
+@DependsOn("usersRepositoryImpl")
+
 public class RoomsRepositoryImpl implements RoomsRepository {
     private final JdbcTemplate jdbcTemplate;
 
@@ -71,7 +74,7 @@ public class RoomsRepositoryImpl implements RoomsRepository {
     public void save(Room entity) {
         String sql = "INSERT INTO rooms (name, owner_id) VALUES (?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        
+
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, entity.getName());
@@ -79,8 +82,13 @@ public class RoomsRepositoryImpl implements RoomsRepository {
             return ps;
         }, keyHolder);
         
-        if (keyHolder.getKey() != null) {
-            entity.setId(keyHolder.getKey().longValue());
+        // Debug: See what's actually in the KeyHolder
+        System.out.println("KeyHolder keys: " + keyHolder.getKeys());
+        System.out.println("KeyHolder key: " + keyHolder.getKeys().get("id"));
+        
+        if (keyHolder.getKeys() != null && keyHolder.getKeys().containsKey("id")) {
+            Number generatedId = (Number) keyHolder.getKeys().get("id");
+            entity.setId(generatedId.longValue());
         }
     }
 

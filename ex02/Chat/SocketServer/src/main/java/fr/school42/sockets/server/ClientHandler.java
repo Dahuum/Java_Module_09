@@ -1,31 +1,40 @@
-
 package fr.school42.sockets.server;
 
-
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import fr.school42.sockets.models.Message;
+import fr.school42.sockets.models.Room;
 import fr.school42.sockets.models.User;
 import fr.school42.sockets.repositories.MessagesRepository;
+import fr.school42.sockets.repositories.RoomsRepository;
 import fr.school42.sockets.services.UserService;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
     private final Server server;
     private final UserService userService;
     private final MessagesRepository messagesRepository;
+    private final RoomsRepository roomsRepository;
+    private final Gson gson;
     
     private PrintWriter out;
     private BufferedReader in;
     private User authenticatedUser;
+    private Room currentRoom;
     private boolean running;
 
-    public ClientHandler(Socket socket, Server server, UserService userService, MessagesRepository messagesRepository) {
+    public ClientHandler(Socket socket, Server server, UserService userService, 
+                        MessagesRepository messagesRepository, RoomsRepository roomsRepository) {
         this.socket = socket;
         this.server = server;
         this.userService = userService;
         this.messagesRepository = messagesRepository;
+        this.roomsRepository = roomsRepository;
+        this.gson = new Gson();
         this.running = true;
     }
 
@@ -44,10 +53,13 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
-            // Add to connected clients
             server.addClient(this);
-            
-            out.println("Start messaging");
+
+            // Room selection phase
+            if (!selectRoom()) {
+                close();
+                return;
+            }
 
             // Message loop
             messageLoop();
@@ -60,16 +72,19 @@ public class ClientHandler implements Runnable {
     }
 
     private boolean authenticate() throws IOException {
-        String command = in.readLine();
-        if (command == null) return false;
+        // Show menu
+        out.println("1. signIn");
+        out.println("2. signUp");
+        out.println("3. Exit");
 
-        command = command.trim();
+        String choice = in.readLine();
+        if (choice == null) return false;
 
-        if (command.equals("signUp")) {
-            return handleSignUp();
-        } else if (command.equals("signIn")) {
-            return handleSignIn();
-        }
+        choice = choice.trim();
+
+        if      (choice.equals("1"))    return handleSignIn();
+        else if (choice.equals("2"))    return handleSignUp();
+        else if (choice.equals("3"))    return false;
 
         return false;
     }
@@ -108,40 +123,178 @@ public class ClientHandler implements Runnable {
 
         boolean success = userService.signIn(username.trim(), password);
         if (success) {
-            // Get the authenticated user from database
             authenticatedUser = userService.getUserByUsername(username.trim());
             System.out.println("User signed in: " + username);
             return true;
+
         } else {
             out.println("Invalid credentials!");
             return false;
         }
     }
 
+    private boolean selectRoom() throws IOException {
+        while (true) {
+            out.println("1. Create room");
+            out.println("2. Choose room");
+            out.println("3. Exit");
+
+            String choice = in.readLine();
+            if (choice == null) return false;
+
+            choice = choice.trim();
+
+            if (choice.equals("1")) {
+                if (handleCreateRoom()) return true; // Room created and joined
+            } else if (choice.equals("2")) {
+                if (handleChooseRoom()) return true; // Room selected and joined
+            } else if (choice.equals("3")) return false; // Exit
+        }
+    }
+
+    private boolean handleCreateRoom() throws IOException {
+        out.println("Enter room name:");
+        String roomName = in.readLine();
+        if (roomName == null || roomName.trim().isEmpty()) return false;
+        roomName = roomName.trim();
+
+        Room newRoom = new Room(roomName, authenticatedUser.getId());
+        try {
+            roomsRepository.save(newRoom);
+            currentRoom = newRoom;
+            roomsRepository.addUserToRoom(authenticatedUser.getId(), currentRoom.getId());
+            System.out.println("7na hna");
+            
+            out.println(currentRoom.getName() + " created");
+            System.out.println("Room created: " + roomName + " by " + authenticatedUser.getUsername());
+            return true;
+        } catch (Exception e) {
+            out.println("Room already exists or error occurred!\nException Message: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean handleChooseRoom() throws IOException {
+        List<Room> rooms = roomsRepository.findAll();
+
+        if (rooms.isEmpty()) {
+            out.println("No rooms available. Please create one.");
+            return false;
+        }
+
+        out.println("Rooms:");
+        for (int i = 0; i < rooms.size(); i++) {
+            out.println((i + 1) + ". " + rooms.get(i).getName());
+        }
+        out.println((rooms.size() + 1) + ". Exit");
+
+        String choice = in.readLine();
+        if (choice == null) return false;
+
+        try {
+            int index = Integer.parseInt(choice.trim()) - 1;
+            
+            if (index >= 0 && index < rooms.size()) {
+                currentRoom = rooms.get(index);
+                roomsRepository.addUserToRoom(authenticatedUser.getId(), currentRoom.getId());
+                
+                out.println(currentRoom.getName() + " ---");
+                
+                // Show last 30 messages
+                showRoomHistory();
+                
+                return true;
+            }
+            else if (index == rooms.size()) return false; // Exit option
+        } catch (NumberFormatException e) {
+            out.println("Invalid choice!");
+        }
+
+        return false;
+    }
+
+    private void showRoomHistory() {
+        List<Message> history = messagesRepository.findRecentByRoomId(currentRoom.getId(), 30);
+        for (Message msg : history) {
+            out.println(msg.formatForChat());
+        }
+    }
+
     private void messageLoop() throws IOException {
         String input;
         while (running && (input = in.readLine()) != null) {
-            input = input.trim();
-
-            if (input.equalsIgnoreCase("Exit")) {
-                out.println("You have left the chat.");
-                break;
+            
+            // Try to parse as JSON first
+            try {
+                JsonObject json = gson.fromJson(input, JsonObject.class);
+                
+                if (json.has("message")) {
+                    String messageText = json.get("message").getAsString();
+                    
+                    // Check if user wants to exit
+                    if (messageText.equalsIgnoreCase("Exit")) {
+                        out.println("You have left the chat.");
+                        break;
+                    }
+                    
+                    // SECURITY CHECKS (this is why we use JSON!)
+                    
+                    // Check 1: If JSON has fromId, verify it's the right user
+                    if (json.has("fromId")) {
+                        Long fromId = json.get("fromId").getAsLong();
+                        if (!fromId.equals(authenticatedUser.getId())) {
+                            out.println("ERROR: Invalid fromId! You are user " + authenticatedUser.getId());
+                            continue; // Skip this message
+                        }
+                    }
+                    
+                    // Check 2: If JSON has roomId, verify it's the right room  
+                    if (json.has("roomId")) {
+                        Long roomId = json.get("roomId").getAsLong();
+                        if (!roomId.equals(currentRoom.getId())) {
+                            out.println("ERROR: Invalid roomId! You are in room " + currentRoom.getId());
+                            continue; // Skip this message
+                        }
+                    }
+                    
+                    // All checks passed! Process the message normally
+                    Message message = new Message(
+                        authenticatedUser.getId(),        // Use the REAL user ID
+                        authenticatedUser.getUsername(),  // Use the REAL username
+                        messageText,                      // Use the message from JSON
+                        currentRoom.getId()               // Use the REAL room ID
+                    );
+                    messagesRepository.save(message);
+                    
+                    // Broadcast normally (same as before)
+                    server.broadcastToRoom(message.formatForChat(), currentRoom.getId());
+                }
+                
+            } catch (Exception e) {
+                // If not JSON, treat as plain text (for backward compatibility)
+                String text = input.trim();
+                
+                if (text.equalsIgnoreCase("Exit")) {
+                    out.println("You have left the chat.");
+                    break;
+                }
+                
+                if (text.isEmpty()) continue;
+                
+                // Process plain text message (same as before)
+                Message message = new Message(
+                    authenticatedUser.getId(),
+                    authenticatedUser.getUsername(),
+                    text,
+                    currentRoom.getId()
+                );
+                messagesRepository.save(message);
+                
+                server.broadcastToRoom(message.formatForChat(), currentRoom.getId());
             }
-
-            if (input.isEmpty()) continue;
-
-            // Create and save message
-            Message message = new Message(
-                authenticatedUser.getId(),
-                authenticatedUser.getUsername(),
-                input
-            );
-            messagesRepository.save(message);
-
-            // Broadcast to all clients
-            server.broadcast(message.formatForChat(), this);
         }
     }
+
 
     public void sendMessage(String message) {
         if (out != null) {
@@ -153,8 +306,17 @@ public class ClientHandler implements Runnable {
         return authenticatedUser;
     }
 
+    public Room getCurrentRoom() {
+        return currentRoom;
+    }
+
     public void close() {
         running = false;
+        
+        if (currentRoom != null && authenticatedUser != null) {
+            roomsRepository.removeUserFromRoom(authenticatedUser.getId(), currentRoom.getId());
+        }
+        
         server.removeClient(this);
         
         try {

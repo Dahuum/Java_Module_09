@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.DependsOn;
+
 
 import javax.sql.DataSource;
 import java.sql.ResultSet;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
+@DependsOn({"usersRepositoryImpl", "roomsRepositoryImpl"})
 public class MessagesRepositoryImpl implements MessagesRepository {
     private final JdbcTemplate jdbcTemplate;
 

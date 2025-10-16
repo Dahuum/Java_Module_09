@@ -16,6 +16,7 @@ public class Main {
 		}
 		
 		try {
+		    System.out.println("Wa l9lawi, rah kayna try catch fl main ? ");
     		ApplicationContext context = new AnnotationConfigApplicationContext(SocketsApplicationConfig.class);
     
     		Server server = context.getBean(Server.class);
